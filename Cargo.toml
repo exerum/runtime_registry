@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = ">=1.0.45"
-wasmer = ">=2.0.0"
+wasmer = { git = "https://github.com/exerum/wasmer", branch = "wasm32-wasi-beta" }
 dirs = ">=4.0.0"
 bytes = ">=1.1.0"
 reqwest = { version = "0.11.6", features = ["blocking"] }
