@@ -5,13 +5,13 @@ use bytes::Bytes;
 use wasmer::Module;
 use wasmer::Store;
 
-#[allow(unused)]
-const RUNTIME_URL: &'static str = "https://host.com/runtime.wasm";
+fn make_rt_url(version: &str) -> String {
+    format!("https://github.com/exerum/js-runtime/releases/download/{}/js-runtime.wasm", version)
+}
 
-#[cfg(not(debug_assertions))]
-fn download_runtime() -> Result<Bytes> {
-    // TODO: include version
-    reqwest::blocking::get(RUNTIME_URL)
+// v0.0.1a
+fn download_runtime(version: &str) -> anyhow::Result<Bytes> {
+    reqwest::blocking::get(make_rt_url(version))
         .map_err(|err| anyhow!("Error downloading runtime: {}", err.to_string()))?
         .bytes()
         .map_err(|err| {
@@ -20,12 +20,6 @@ fn download_runtime() -> Result<Bytes> {
                 err.to_string()
             )
         })
-}
-
-#[cfg(debug_assertions)]
-fn download_runtime() -> Result<Bytes, Box<dyn std::error::Error>> {
-    // Ok(Bytes::from(include_bytes!("../../target/wasm32-wasi/debug/quickjs_rt.wasm").to_vec()))
-    Ok(Bytes::from(Vec::new()))
 }
 
 pub struct RuntimeRegistry {
@@ -40,14 +34,12 @@ impl RuntimeRegistry {
     }
 
     pub fn get_wasm(&self, runtime: &str) -> Result<Bytes, Box<dyn std::error::Error>> {
-        // TODO: runtime is hardcoded now. Need an index file, uploaded to the server,
-        // with a map of version to repositories urls of wasm files etc.
         if self.cache.has_wasm(runtime) {
             Ok(Bytes::from(
                 std::fs::read(self.cache.wasm_path(runtime)).unwrap(),
             ))
         } else {
-            let bytes = download_runtime().unwrap();
+            let bytes = download_runtime(runtime).unwrap();
             self.cache.put_wasm(runtime, &bytes.to_vec());
             Ok(bytes)
         }
