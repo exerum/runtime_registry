@@ -6,11 +6,14 @@ use wasmer::Module;
 use wasmer::Store;
 
 fn make_rt_url(version: &str) -> String {
-    format!("https://github.com/exerum/js-runtime/releases/download/{}/js-runtime.wasm", version)
+    format!("https://github.com/exerum/js-runtime/releases/download/v{}/js-runtime.wasm", version)
 }
 
-// v0.0.1a
-fn download_runtime(version: &str) -> anyhow::Result<Bytes> {
+fn download_runtime(runtime: &str) -> anyhow::Result<Bytes> {
+    let mut parts = runtime.split("@");
+    let _lang = parts.next().unwrap();
+    // TODO: support other languages
+    let version = parts.next().unwrap();
     reqwest::blocking::get(make_rt_url(version))
         .map_err(|err| anyhow!("Error downloading runtime: {}", err.to_string()))?
         .bytes()
@@ -52,9 +55,11 @@ impl RuntimeRegistry {
     ) -> Result<Module, Box<dyn std::error::Error>> {
         let mod_path = self.cache.module_path(runtime);
         let module = if self.cache.has_compiled_module(runtime) {
+            println!("Cached module: {:?}", mod_path);
             unsafe { Module::deserialize_from_file(&store, mod_path)? }
         } else {
             let wasm_bytes = self.get_wasm(runtime).unwrap().to_vec();
+            println!("Downloaded wasm. Length is: {:?}", wasm_bytes.len());
             let module = Module::new(&store, wasm_bytes)?;
             module.serialize_to_file(mod_path)?;
             module
